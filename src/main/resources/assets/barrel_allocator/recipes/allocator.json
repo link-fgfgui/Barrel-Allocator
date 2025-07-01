@@ -1,0 +1,22 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "PSP",
+    "PIP",
+    "PSP"
+  ],
+  "key": {
+    "P": {
+      "tag": "minecraft:planks"
+    },
+    "S": {
+      "tag": "minecraft:wooden_slabs"
+    },
+    "I": {
+      "tag": "minecraft:redstone_torch"
+    }
+  },
+  "result": {
+    "item": "barrel_allocator:allocator"
+  }
+}
