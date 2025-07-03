@@ -1,6 +1,6 @@
 {
   "parent": "barrel_allocator:block/allocator_base",
   "textures": {
-    "up": "minecraft:block/barrel_top"
+    "up": "minecraft:block/barrel_top_open"
   }
 }

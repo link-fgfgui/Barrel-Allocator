@@ -18,7 +18,6 @@ import net.minecraft.world.phys.BlockHitResult;
 
 
 public class Allocator extends BarrelBlock {
-
     public Allocator() {
         super(BlockBehaviour.Properties.of()
                 .mapColor(MapColor.WOOD)

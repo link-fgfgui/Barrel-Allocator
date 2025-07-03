@@ -19,6 +19,7 @@ import net.minecraft.world.level.block.entity.ContainerOpenersCounter;
 import net.minecraft.world.level.block.entity.RandomizableContainerBlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.stream.IntStream;
@@ -74,8 +75,29 @@ public class AllocatorBlockEntity extends RandomizableContainerBlockEntity imple
         Direction facing = this.getBlockState().getValue(BlockStateProperties.FACING);
 //        Barrel_allocator.LOGGER.info(facing.name());
 //        Direction front = facing;
-        Direction back = facing.getOpposite();
+//        Direction back = facing.getOpposite();
 
+        Direction left = getLeft(facing);
+
+        boolean DirectionMatched = left == direction;
+//        Barrel_allocator.LOGGER.info(left.name()+" "+direction.name()+" "+(DirectionMatched?"True":"False"));
+        if (DirectionMatched) {
+            return true;
+        }
+        BlockEntity target = level.getBlockEntity(worldPosition.relative(left));
+        if (target instanceof Container container) {
+            for (int slot = 0; slot < container.getContainerSize(); slot++) {
+                if (container.canPlaceItem(slot, itemStack)) {
+                    if (container.getItem(slot).isEmpty()) {
+                        container.setItem(slot, itemStack.copyAndClear());
+                    }
+                }
+            }
+        }
+        return false;
+    }
+
+    private static @NotNull Direction getLeft(Direction facing) {
         Direction left;
         Direction right;
         Direction top;
@@ -96,37 +118,7 @@ public class AllocatorBlockEntity extends RandomizableContainerBlockEntity imple
             left = facing.getClockWise();
             right = facing.getCounterClockWise();
         }
-
-        boolean DirectionMatched = switch (Config.direction) {
-            case BOTTOM -> bottom == direction;
-            case TOP -> top == direction;
-            case LEFT -> left == direction;
-            case RIGHT -> right == direction;
-            case BACK -> back == direction;
-            default -> false;
-        };
-//        Barrel_allocator.LOGGER.info(left.name()+" "+direction.name()+" "+(DirectionMatched?"True":"False"));
-        if (DirectionMatched) {
-            return true;
-        }
-        BlockPos targetPos = switch (Config.direction) {
-            case BOTTOM -> worldPosition.relative(bottom);
-            case TOP -> worldPosition.relative(top);
-            case LEFT -> worldPosition.relative(left);
-            case RIGHT -> worldPosition.relative(right);
-            case BACK -> worldPosition.relative(back);
-        };
-        BlockEntity target = level.getBlockEntity(targetPos);
-        if (target instanceof Container container) {
-            for (int slot = 0; slot < container.getContainerSize(); slot++) {
-                if (container.canPlaceItem(slot, itemStack)) {
-                    if (container.getItem(slot).isEmpty()) {
-                        container.setItem(slot, itemStack.copyAndClear());
-                    }
-                }
-            }
-        }
-        return false;
+        return left;
     }
 
     @Override
