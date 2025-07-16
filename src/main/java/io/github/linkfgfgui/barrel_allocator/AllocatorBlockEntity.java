@@ -1,103 +1,64 @@
 package io.github.linkfgfgui.barrel_allocator;
 
 import net.minecraft.core.*;
+import net.minecraft.core.component.DataComponentMap;
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
-import net.minecraft.sounds.SoundEvent;
-import net.minecraft.sounds.SoundEvents;
-import net.minecraft.sounds.SoundSource;
-import net.minecraft.world.*;
+import net.minecraft.world.Container;
+import net.minecraft.world.LockCode;
+import net.minecraft.world.MenuProvider;
+import net.minecraft.world.Nameable;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
-import net.minecraft.world.inventory.ChestMenu;
-import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.BarrelBlock;
+import net.minecraft.world.item.component.ItemContainerContents;
+import net.minecraft.world.level.block.entity.BaseContainerBlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntity;
-import net.minecraft.world.level.block.entity.ContainerOpenersCounter;
-import net.minecraft.world.level.block.entity.RandomizableContainerBlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
+import net.neoforged.neoforge.event.GrindstoneEvent;
+import net.neoforged.neoforge.fluids.capability.IFluidHandler;
+import net.neoforged.neoforge.fluids.capability.templates.FluidTank;
+import net.neoforged.neoforge.items.IItemHandler;
+import net.neoforged.neoforge.items.ItemStackHandler;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.stream.IntStream;
+public class AllocatorBlockEntity extends BlockEntity implements Nameable {
+    private final int ITEMSTACKSIZE = 27;
+    private final int FLUIDTANKCAPA = 4000;
 
-public class AllocatorBlockEntity extends RandomizableContainerBlockEntity implements WorldlyContainer {
-    private final ContainerOpenersCounter openersCounter = new ContainerOpenersCounter() {
-        @Override
-        protected void onOpen(Level p_155062_, BlockPos p_155063_, BlockState p_155064_) {
-            AllocatorBlockEntity.this.playSound(p_155064_, SoundEvents.BARREL_OPEN);
-            AllocatorBlockEntity.this.updateBlockState(p_155064_, true);
-        }
+    @Nullable
+    private Component name;
 
+    private final Direction left = getLeft();
+    private final BlockPos targetBlockPos = getBlockPos().relative(left);
+    private final ItemStackHandler inventory = new ItemStackHandler(ITEMSTACKSIZE) {
         @Override
-        protected void onClose(Level p_155072_, BlockPos p_155073_, BlockState p_155074_) {
-            AllocatorBlockEntity.this.playSound(p_155074_, SoundEvents.BARREL_CLOSE);
-            AllocatorBlockEntity.this.updateBlockState(p_155074_, false);
-        }
-
-        @Override
-        protected void openerCountChanged(Level p_155066_, BlockPos p_155067_, BlockState p_155068_, int p_155069_, int p_155070_) {
-        }
-
-        @Override
-        protected boolean isOwnContainer(Player p_155060_) {
-            if (p_155060_.containerMenu instanceof ChestMenu) {
-                Container container = ((ChestMenu) p_155060_.containerMenu).getContainer();
-                return container == AllocatorBlockEntity.this;
-            } else {
-                return false;
-            }
+        protected void onContentsChanged(int slot) {
+            setChanged();
         }
     };
-    private NonNullList<ItemStack> items = NonNullList.withSize(27, ItemStack.EMPTY);
+    public final FluidTank tank = new FluidTank(FLUIDTANKCAPA) {
+        @Override
+        protected void onContentsChanged() {
+            setChanged();
+        }
+    };
+
+
 
     public AllocatorBlockEntity(BlockPos pos, BlockState blockState) {
         super(Barrel_allocator.ALLOCATOR_BE_TYPE.get(), pos, blockState);
     }
 
-    @Override
-    protected Component getDefaultName() {
-        return Component.translatable("container.barrel_allocator.allocator");
+    private @NotNull Direction getLeft() {
+        Direction facing = this.getBlockState().getValue(BlockStateProperties.HORIZONTAL_FACING);
+        return getLeft(facing);
     }
 
-    @Override
-    public int[] getSlotsForFace(Direction side) {
-        return IntStream.range(0, this.getContainerSize()).toArray();
-    }
-
-    @Override
-    public boolean canPlaceItemThroughFace(int index, ItemStack itemStack, @Nullable Direction direction) {
-        if (direction == null) return false;
-//        Barrel_allocator.LOGGER.info(Config.direction.name());
-        Direction facing = this.getBlockState().getValue(BlockStateProperties.FACING);
-//        Barrel_allocator.LOGGER.info(facing.name());
-//        Direction front = facing;
-//        Direction back = facing.getOpposite();
-
-        Direction left = getLeft(facing);
-
-        boolean DirectionMatched = left == direction;
-//        Barrel_allocator.LOGGER.info(left.name()+" "+direction.name()+" "+(DirectionMatched?"True":"False"));
-        if (DirectionMatched) {
-            return true;
-        }
-        BlockEntity target = level.getBlockEntity(worldPosition.relative(left));
-        if (target instanceof Container container) {
-            for (int slot = 0; slot < container.getContainerSize(); slot++) {
-                if (container.canPlaceItem(slot, itemStack)) {
-                    if (container.getItem(slot).isEmpty()) {
-                        container.setItem(slot, itemStack.copyAndClear());
-                    }
-                }
-            }
-        }
-        return false;
-    }
-
-    private static @NotNull Direction getLeft(Direction facing) {
+    private @NotNull Direction getLeft(Direction facing) {
         Direction left;
         Direction right;
         Direction top;
@@ -121,82 +82,68 @@ public class AllocatorBlockEntity extends RandomizableContainerBlockEntity imple
         return left;
     }
 
-    @Override
-    public boolean canTakeItemThroughFace(int index, ItemStack stack, Direction direction) {
-        return this.canTakeItem(this, index, stack);
-    }
 
-
-    //copied from net.minecraft.world.level.block.entity.BarrelBlockEntity
 
     @Override
     protected void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
         super.saveAdditional(tag, registries);
-        if (!this.trySaveLootTable(tag)) {
-            ContainerHelper.saveAllItems(tag, this.items, registries);
+        tag.put("inv", inventory.serializeNBT(registries));
+        tag.put("tank", tank.writeToNBT(registries,new CompoundTag()));
+        if (this.name != null) {
+            tag.putString("CustomName", Component.Serializer.toJson(this.name, registries));
         }
+        this.setChanged();
     }
 
     @Override
     protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
         super.loadAdditional(tag, registries);
-        this.items = NonNullList.withSize(this.getContainerSize(), ItemStack.EMPTY);
-        if (!this.tryLoadLootTable(tag)) {
-            ContainerHelper.loadAllItems(tag, this.items, registries);
+        inventory.deserializeNBT(registries, tag.getCompound("inv"));
+        tank.readFromNBT(registries,tag.getCompound("tank"));
+        if (tag.contains("CustomName", 8)) {
+            this.name = parseCustomNameSafe(tag.getString("CustomName"), registries);
         }
     }
 
-    @Override
-    public int getContainerSize() {
-        return 27;
+    public IItemHandler getCap(Direction side) {
+        return new DirectionalIItemHandlerWrapper(inventory, side == left, level, targetBlockPos, left.getOpposite());
+    }
+
+    public IFluidHandler getCapF(Direction side) {
+        return new DirectionalIFluidHandlerWrapper(tank, side == left, level, targetBlockPos, left.getOpposite());
     }
 
     @Override
-    protected NonNullList<ItemStack> getItems() {
-        return this.items;
+    public Component getName() {
+        return this.name != null ? this.name : Component.translatable("block.barrel_allocator.allocator");
     }
 
     @Override
-    protected void setItems(NonNullList<ItemStack> items) {
-        this.items = items;
+    public boolean hasCustomName() {
+        return this.getCustomName() != null;
     }
 
     @Override
-    protected AbstractContainerMenu createMenu(int id, Inventory player) {
-        return ChestMenu.threeRows(id, player, this);
+    public Component getDisplayName() {
+        return this.getName();
     }
 
     @Override
-    public void startOpen(Player player) {
-        if (!this.remove && !player.isSpectator()) {
-            this.openersCounter.incrementOpeners(player, this.getLevel(), this.getBlockPos(), this.getBlockState());
-        }
+    public @Nullable Component getCustomName() {
+        return name;
+    }
+    @Override
+    protected void applyImplicitComponents(BlockEntity.DataComponentInput componentInput) {
+        super.applyImplicitComponents(componentInput);
+        this.name = componentInput.get(DataComponents.CUSTOM_NAME);
     }
 
     @Override
-    public void stopOpen(Player player) {
-        if (!this.remove && !player.isSpectator()) {
-            this.openersCounter.decrementOpeners(player, this.getLevel(), this.getBlockPos(), this.getBlockState());
-        }
+    protected void collectImplicitComponents(DataComponentMap.Builder components) {
+        super.collectImplicitComponents(components);
+        components.set(DataComponents.CUSTOM_NAME, this.name);
     }
 
-    public void recheckOpen() {
-        if (!this.remove) {
-            this.openersCounter.recheckOpeners(this.getLevel(), this.getBlockPos(), this.getBlockState());
-        }
-    }
-
-    void updateBlockState(BlockState state, boolean open) {
-        this.level.setBlock(this.getBlockPos(), state.setValue(BarrelBlock.OPEN, Boolean.valueOf(open)), 3);
-    }
-
-    void playSound(BlockState state, SoundEvent sound) {
-        Vec3i vec3i = state.getValue(BarrelBlock.FACING).getNormal();
-        double d0 = (double) this.worldPosition.getX() + 0.5 + (double) vec3i.getX() / 2.0;
-        double d1 = (double) this.worldPosition.getY() + 0.5 + (double) vec3i.getY() / 2.0;
-        double d2 = (double) this.worldPosition.getZ() + 0.5 + (double) vec3i.getZ() / 2.0;
-        this.level.playSound(null, d0, d1, d2, sound, SoundSource.BLOCKS, 0.5F, this.level.random.nextFloat() * 0.1F + 0.9F);
-    }
 
 
 }

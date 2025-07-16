@@ -1,4 +1,3 @@
 {
-  "block.barrel_allocator.allocator": "Allocator",
-  "container.barrel_allocator.allocator": "Allocator"
+  "block.barrel_allocator.allocator": "Allocator"
 }

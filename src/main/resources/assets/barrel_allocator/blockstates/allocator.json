@@ -1,56 +1,36 @@
 {
   "variants": {
-    "facing=down,open=false": {
+    "facing=down": {
       "model": "barrel_allocator:block/allocator",
       "x": 180
     },
-    "facing=down,open=true": {
-      "model": "barrel_allocator:block/allocator_open",
-      "x": 180
-    },
-    "facing=east,open=false": {
+
+    "facing=east": {
       "model": "barrel_allocator:block/allocator",
       "x": 90,
       "y": 90
     },
-    "facing=east,open=true": {
-      "model": "barrel_allocator:block/allocator_open",
-      "x": 90,
-      "y": 90
-    },
-    "facing=north,open=false": {
+
+    "facing=north": {
       "model": "barrel_allocator:block/allocator",
       "x": 90
     },
-    "facing=north,open=true": {
-      "model": "barrel_allocator:block/allocator_open",
-      "x": 90
-    },
-    "facing=south,open=false": {
+
+    "facing=south": {
       "model": "barrel_allocator:block/allocator",
       "x": 90,
       "y": 180
     },
-    "facing=south,open=true": {
-      "model": "barrel_allocator:block/allocator_open",
-      "x": 90,
-      "y": 180
-    },
-    "facing=up,open=false": {
+
+    "facing=up": {
       "model": "barrel_allocator:block/allocator"
     },
-    "facing=up,open=true": {
-      "model": "barrel_allocator:block/allocator_open"
-    },
-    "facing=west,open=false": {
+
+    "facing=west": {
       "model": "barrel_allocator:block/allocator",
-      "x": 90,
-      "y": 270
-    },
-    "facing=west,open=true": {
-      "model": "barrel_allocator:block/allocator_open",
       "x": 90,
       "y": 270
     }
+
   }
 }

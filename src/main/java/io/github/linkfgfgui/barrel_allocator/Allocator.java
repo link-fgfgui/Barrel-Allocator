@@ -1,55 +1,46 @@
 package io.github.linkfgfgui.barrel_allocator;
 
+import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
-import net.minecraft.server.level.ServerLevel;
-import net.minecraft.stats.Stats;
-import net.minecraft.util.RandomSource;
-import net.minecraft.world.InteractionResult;
-import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.BarrelBlock;
-import net.minecraft.world.level.block.SoundType;
+import net.minecraft.core.Direction;
+import net.minecraft.world.item.context.BlockPlaceContext;
+import net.minecraft.world.level.block.*;
+import net.minecraft.world.level.block.entity.BarrelBlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.StateDefinition;
+import net.minecraft.world.level.block.state.properties.BlockStateProperties;
+import net.minecraft.world.level.block.state.properties.DirectionProperty;
 import net.minecraft.world.level.block.state.properties.NoteBlockInstrument;
 import net.minecraft.world.level.material.MapColor;
-import net.minecraft.world.phys.BlockHitResult;
+import org.jetbrains.annotations.Nullable;
 
 
-public class Allocator extends BarrelBlock {
+public class Allocator extends Block implements EntityBlock {
+    public static final DirectionProperty FACING = BlockStateProperties.HORIZONTAL_FACING;
     public Allocator() {
         super(BlockBehaviour.Properties.of()
                 .mapColor(MapColor.WOOD)
                 .instrument(NoteBlockInstrument.BASS)
-                .strength(2.5F)
+                .strength(1.5F)
                 .sound(SoundType.WOOD));
     }
 
     @Override
-    protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hitResult) {
-        if (level.isClientSide) {
-            return InteractionResult.SUCCESS;
-        } else {
-            BlockEntity blockentity = level.getBlockEntity(pos);
-            if (blockentity instanceof AllocatorBlockEntity) {
-                player.openMenu((AllocatorBlockEntity) blockentity);
-                player.awardStat(Stats.OPEN_BARREL);
-            }
-            return InteractionResult.CONSUME;
-        }
+    protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
+        super.createBlockStateDefinition(builder);
+        builder.add(FACING);
     }
 
     @Override
-    protected void tick(BlockState state, ServerLevel level, BlockPos pos, RandomSource random) {
-        BlockEntity blockentity = level.getBlockEntity(pos);
-        if (blockentity instanceof AllocatorBlockEntity) {
-            ((AllocatorBlockEntity) blockentity).recheckOpen();
-        }
+    public @Nullable BlockState getStateForPlacement(BlockPlaceContext context) {
+        Direction dir = context.getHorizontalDirection().getOpposite();
+        return this.defaultBlockState().setValue(FACING, dir);
     }
 
     @Override
     public BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
-        return Barrel_allocator.ALLOCATOR_BE_TYPE.get().create(pos, state);
+        return new AllocatorBlockEntity(pos, state);
     }
 }
