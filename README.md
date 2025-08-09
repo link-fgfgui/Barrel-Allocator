@@ -14,3 +14,8 @@ Extract:
 ![Extract](img/extract.gif)  
 Redirect:  
 ![Redirect](img/redirect.gif)  
+Fluix Auto Craft Example:  
+
+
+https://github.com/user-attachments/assets/9c373a6e-a0f2-4385-bf89-d4c0253d2550
+
